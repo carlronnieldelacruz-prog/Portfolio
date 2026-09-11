@@ -32,6 +32,8 @@ The project covered the following steps:
 
 Data Cleaning Project: [data cleaning project.sql](https://github.com/user-attachments/files/32092556/data.cleaning.project.sql)
 
+# [Project #2: Exploratory Data Analysis in SQL on World Layoffs Data]
+
 
 
 
