@@ -12,8 +12,8 @@ This is a project I did that's part of the online course I took on Data Analytic
 SELECT * \\
 FROM layoffs;
 
--- First thing, we want to do is to create a staging table with the raw data, which will be our working document to clean the data
-CREATE TABLE layoffs_staging
+First thing, we want to do is to create a staging table with the raw data, which will be our working document to clean the data
+CREATE TABLE layoffs_staging \\
 LIKE layoffs;
 
 INSERT layoffs_staging
