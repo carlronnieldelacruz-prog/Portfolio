@@ -30,7 +30,6 @@ The project covered the following steps:
 - Removed records with insufficient data
 - Removed temporary columns
 
-Raw Data: https://github.com/AlexTheAnalyst/MySQL-YouTube-Series/blob/main/layoffs.csv 
 Data Cleaning Project: [data cleaning project.sql](https://github.com/user-attachments/files/32092556/data.cleaning.project.sql)
 
 
