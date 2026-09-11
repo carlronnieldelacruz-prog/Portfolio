@@ -9,61 +9,100 @@ This is a project I did that's part of the online course I took on Data Analytic
 * Using MySQL, the project utilized joins, aggregations, CTEs, and filtering to clean and standardize the data
 
 
+-- ============================================================
+-- DATA CLEANING IN SQL
+-- World Layoffs Dataset
+-- Tool: MySQL
+-- ============================================================
+
+-- ============================================================
+-- 1. REVIEW RAW DATA
+-- ============================================================
+
 SELECT *
 FROM layoffs;
 
--- First thing, we want to do is to create a staging table with the raw data, which will be our working document to clean the data
+
+-- ============================================================
+-- 2. CREATE STAGING TABLE
+-- ============================================================
+
 CREATE TABLE layoffs_staging
 LIKE layoffs;
 
-INSERT layoffs_staging 
+INSERT INTO layoffs_staging
 SELECT *
 FROM layoffs;
--- Now, we perform the following data cleaning
--- 1. Remove Duplicates, if any
--- 2. Standardize the Data
--- 3. Null or blank values
--- 4. Remove any columns
- 
- -- Here, we identify duplicate entries by setting row number for each distinct entry
-SELECT *, ROW_NUMBER() OVER(PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) AS row_num
-FROM layoffs_staging;
 
-WITH duplicate_cte AS
-(SELECT *,
-ROW_NUMBER() OVER(
-	PARTITION BY company, location, industry, total_laid_off, percentage_laid_off, `date`, stage, country, funds_raised_millions) AS row_num
-FROM layoffs_staging
+
+-- ============================================================
+-- 3. IDENTIFY DUPLICATES
+-- ============================================================
+
+WITH duplicate_cte AS (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY
+                   company,
+                   location,
+                   industry,
+                   total_laid_off,
+                   percentage_laid_off,
+                   `date`,
+                   stage,
+                   country,
+                   funds_raised_millions
+           ) AS row_num
+    FROM layoffs_staging
 )
+
 SELECT *
 FROM duplicate_cte
 WHERE row_num > 1;
 
--- Here we create a new table that will remove all duplicate entries in our data
-CREATE TABLE `layoffs_staging3` (
-  `company` text,
-  `location` text,
-  `industry` text,
-  `total_laid_off` int DEFAULT NULL,
-  `percentage_laid_off` text,
-  `date` text,
-  `stage` text,
-  `country` text,
-  `funds_raised_millions` int DEFAULT NULL,
-  `row_num` INT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-SELECT *
-FROM layoffs_staging3
-WHERE row_num > 1;
+-- ============================================================
+-- 4. CREATE CLEANING TABLE
+-- ============================================================
+
+CREATE TABLE layoffs_staging3 (
+    company TEXT,
+    location TEXT,
+    industry TEXT,
+    total_laid_off INT DEFAULT NULL,
+    percentage_laid_off TEXT,
+    `date` TEXT,
+    stage TEXT,
+    country TEXT,
+    funds_raised_millions INT DEFAULT NULL,
+    row_num INT
+);
+
+
+-- ============================================================
+-- 5. INSERT DATA WITH ROW NUMBERS
+-- ============================================================
 
 INSERT INTO layoffs_staging3
 SELECT *,
-ROW_NUMBER() OVER(
-	PARTITION BY company, location, industry,
-    total_laid_off, percentage_laid_off, `date`,
-    stage, country, funds_raised_millions) AS row_num
+       ROW_NUMBER() OVER (
+           PARTITION BY
+               company,
+               location,
+               industry,
+               total_laid_off,
+               percentage_laid_off,
+               `date`,
+               stage,
+               country,
+               funds_raised_millions
+       ) AS row_num
 FROM layoffs_staging;
+
+
+-- ============================================================
+-- 6. REMOVE DUPLICATES
+-- ============================================================
 
 SET SQL_SAFE_UPDATES = 0;
 
@@ -72,103 +111,104 @@ WHERE row_num > 1;
 
 SET SQL_SAFE_UPDATES = 1;
 
--- Here, we verify whether we have successfully deleted all duplicate entries in the data
+
+-- Verify duplicates were removed
 SELECT *
 FROM layoffs_staging3
-WHERE company = 'Casper';
+WHERE row_num > 1;
 
--- STANDARDIZING THE DATA
--- First, we clean inconsistencies in the data including excess space and extra characters
-SELECT company, TRIM(company)
-FROM layoffs_staging3;
+
+-- ============================================================
+-- 7. STANDARDIZE COMPANY NAMES
+-- ============================================================
 
 UPDATE layoffs_staging3
 SET company = TRIM(company);
 
+
+-- ============================================================
+-- 8. STANDARDIZE INDUSTRY
+-- ============================================================
+
 SELECT DISTINCT industry
 FROM layoffs_staging3
-ORDER BY 1;
+ORDER BY industry;
 
--- From the data, it is noticeable that Crypto under the industry has multiple variations such as 'Crypto Currency' or 'CryptoCurrency'.
--- We want to standardize this data
 UPDATE layoffs_staging3
 SET industry = 'Crypto'
 WHERE industry LIKE 'Crypto%';
 
--- Now, we check every column for inconsistencies
-SELECT DISTINCT country
-FROM layoffs_staging3
-ORDER BY 1;
 
-SELECT DISTINCT country, TRIM(TRAILING '.' FROM country)
-FROM layoffs_staging3
-ORDER BY 1;
+-- ============================================================
+-- 9. STANDARDIZE COUNTRY NAMES
+-- ============================================================
 
 UPDATE layoffs_staging3
 SET country = TRIM(TRAILING '.' FROM country)
 WHERE country LIKE 'United States%';
 
-SELECT `date`,
-STR_TO_DATE(`date`, '%m/%d/%Y')
+
+-- ============================================================
+-- 10. STANDARDIZE DATE FORMAT
+-- ============================================================
+
+SELECT
+    `date`,
+    STR_TO_DATE(`date`, '%m/%d/%Y') AS formatted_date
 FROM layoffs_staging3;
 
 UPDATE layoffs_staging3
-SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y'); 
+SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
 
 ALTER TABLE layoffs_staging3
 MODIFY COLUMN `date` DATE;
 
--- Working with NULL and BLANK values
-SELECT *
-FROM layoffs_staging3
-WHERE total_laid_off IS NULL
-AND percentage_laid_off IS NULL;
 
-SELECT *
-FROM layoffs_staging3
-WHERE industry IS NULL
-OR industry = '';
-
-SELECT *
-FROM layoffs_staging3
-WHERE company = 'Airbnb';
-
--- Here, we will update every NULL and blank data under the industry column to NULL to make it look cleaner.
-
-SELECT *
-FROM layoffs_staging3
-WHERE industry IS NULL 
-OR industry = '';
+-- ============================================================
+-- 11. HANDLE NULL AND BLANK VALUES
+-- ============================================================
 
 UPDATE layoffs_staging3
 SET industry = NULL
 WHERE industry = '';
 
-SELECT *
-FROM layoffs_staging3 st3
-JOIN layoffs_staging3 st4
-	ON st3.company = st4.company
-    AND st3.location = st4.location
-WHERE (st3.industry IS NULL OR st3.industry = '') AND st4.industry IS NOT NULL;
 
-UPDATE layoffs_staging3 st3
-JOIN layoffs_staging3 st4
-	ON st3.company = st4.company
-    AND st3.location = st4.location
-SET st3.industry = st4.industry
-WHERE (st3.industry IS NULL OR st3.industry = '') AND st4.industry IS NOT NULL;
-
+-- Find records where industry is missing
 SELECT *
 FROM layoffs_staging3
 WHERE industry IS NULL;
 
--- WORK WITH THE DATA TO POPULATE NULL VALUES, IF POSSIBLE
 
--- Now, we want to remove columns and rows that we can and we want to
+-- Populate missing industry values where possible
+UPDATE layoffs_staging3 st3
+JOIN layoffs_staging3 st4
+    ON st3.company = st4.company
+    AND st3.location = st4.location
+SET st3.industry = st4.industry
+WHERE st3.industry IS NULL
+  AND st4.industry IS NOT NULL;
+
+
+-- ============================================================
+-- 12. REMOVE RECORDS WITH INSUFFICIENT DATA
+-- ============================================================
+
 DELETE FROM layoffs_staging3
 WHERE total_laid_off IS NULL
-AND percentage_laid_off IS NULL;
+  AND percentage_laid_off IS NULL;
 
--- Lastly, we will drop columns that we won't need
+
+-- ============================================================
+-- 13. REMOVE TEMPORARY COLUMN
+-- ============================================================
+
 ALTER TABLE layoffs_staging3
 DROP COLUMN row_num;
+
+
+-- ============================================================
+-- 14. FINAL REVIEW
+-- ============================================================
+
+SELECT *
+FROM layoffs_staging3;
