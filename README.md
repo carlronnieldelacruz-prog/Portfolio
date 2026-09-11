@@ -9,16 +9,16 @@ This is a project I did that's part of the online course I took on Data Analytic
 * Using MySQL, the project utilized joins, aggregations, CTEs, and filtering to clean and standardize the data
 
 
+SELECT * <br>
+FROM layoffs; <br>
+
+-- First thing, we want to do is to create a staging table with the raw data, which will be our working document to clean the data. <br>
+CREATE TABLE layoffs_staging <br>
+LIKE layoffs; <br>
+
+INSERT layoffs_staging 
 SELECT * 
-FROM layoffs;
-
--- First thing, we want to do is to create a staging table with the raw data, which will be our working document to clean the data.\
-CREATE TABLE layoffs_staging \
-LIKE layoffs;\
-
-INSERT layoffs_staging \
-SELECT * \
-FROM layoffs; \
+FROM layoffs; 
 -- Now, we perform the following data cleaning
 -- 1. Remove Duplicates, if any
 -- 2. Standardize the Data
